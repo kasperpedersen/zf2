@@ -5,19 +5,12 @@
  * @link      http://github.com/zendframework/zf2 for the canonical source repository
  * @copyright Copyright (c) 2005-2012 Zend Technologies USA Inc. (http://www.zend.com)
  * @license   http://framework.zend.com/license/new-bsd New BSD License
- * @package   Zend_Db
+ * @package   Zend_Form
  */
 
-namespace Zend\Db\Sql;
+namespace ZendTest\Form\TestAsset\Entity;
 
-use Zend\Db\Adapter\Adapter;
-
-/**
- * @category   Zend
- * @package    Zend_Db
- * @subpackage Sql
- */
-class Where extends Predicate\Predicate
+class SimplePublicProperty
 {
-
+    public $foo;
 }

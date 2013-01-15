@@ -3,7 +3,7 @@
  * Zend Framework (http://framework.zend.com/)
  *
  * @link      http://github.com/zendframework/zf2 for the canonical source repository
- * @copyright Copyright (c) 2005-2012 Zend Technologies USA Inc. (http://www.zend.com)
+ * @copyright Copyright (c) 2005-2013 Zend Technologies USA Inc. (http://www.zend.com)
  * @license   http://framework.zend.com/license/new-bsd New BSD License
  * @package   Zend_Stdlib
  */
@@ -15,6 +15,7 @@ use Zend\Stdlib\Hydrator\Reflection;
 use ZendTest\Stdlib\TestAsset\ClassMethodsCamelCase;
 use ZendTest\Stdlib\TestAsset\ClassMethodsUnderscore;
 use ZendTest\Stdlib\TestAsset\ClassMethodsCamelCaseMissing;
+use ZendTest\Stdlib\TestAsset\ClassMethodsInvalidParameter;
 use ZendTest\Stdlib\TestAsset\Reflection as ReflectionAsset;
 
 /**
@@ -42,6 +43,11 @@ class HydratorTest extends \PHPUnit_Framework_TestCase
     protected $classMethodsUnderscore;
 
     /**
+     * @var ClassMethodsInvalidParameter
+     */
+    protected $classMethodsInvalidParameter;
+
+    /**
      * @var ReflectionAsset
      */
     protected $reflection;
@@ -51,6 +57,7 @@ class HydratorTest extends \PHPUnit_Framework_TestCase
         $this->classMethodsCamelCase = new ClassMethodsCamelCase();
         $this->classMethodsCamelCaseMissing = new ClassMethodsCamelCaseMissing();
         $this->classMethodsUnderscore = new ClassMethodsUnderscore();
+        $this->classMethodsInvalidParameter = new ClassMethodsInvalidParameter();
         $this->reflection = new ReflectionAsset;
     }
 
@@ -202,5 +209,15 @@ class HydratorTest extends \PHPUnit_Framework_TestCase
         $this->assertSame($this->classMethodsCamelCaseMissing, $test);
         $this->assertEquals($test->getFooBar(), 'foo');
         $this->assertEquals($test->getFooBarBaz(), '2');
+    }
+
+    public function testHydratorClassMethodsWithServiceManager()
+    {
+        $hydrator = new ClassMethods(false);
+        $datas = $hydrator->extract($this->classMethodsInvalidParameter);
+
+        $this->assertTrue($datas['hasBar']);
+        $this->assertEquals('Bar', $datas['foo']);
+        $this->assertFalse($datas['isBla']);
     }
 }

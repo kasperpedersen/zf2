@@ -3,7 +3,7 @@
  * Zend Framework (http://framework.zend.com/)
  *
  * @link      http://github.com/zendframework/zf2 for the canonical source repository
- * @copyright Copyright (c) 2005-2012 Zend Technologies USA Inc. (http://www.zend.com)
+ * @copyright Copyright (c) 2005-2013 Zend Technologies USA Inc. (http://www.zend.com)
  * @license   http://framework.zend.com/license/new-bsd New BSD License
  * @package   Zend_Http
  */
@@ -206,10 +206,12 @@ class Request extends HttpRequest
         // This seems to be the only way to get the Authorization header on Apache
         if (function_exists('apache_request_headers')) {
             $apacheRequestHeaders = apache_request_headers();
-            if (!isset($this->serverParams['HTTP_AUTHORIZATION'])
-                && isset($apacheRequestHeaders['Authorization'])
-            ) {
-                $this->serverParams->set('HTTP_AUTHORIZATION', $apacheRequestHeaders['Authorization']);
+            if (!isset($this->serverParams['HTTP_AUTHORIZATION'])) {
+                if (isset($apacheRequestHeaders['Authorization'])) {
+                    $this->serverParams->set('HTTP_AUTHORIZATION', $apacheRequestHeaders['Authorization']);
+                } elseif (isset($apacheRequestHeaders['authorization'])) {
+                    $this->serverParams->set('HTTP_AUTHORIZATION', $apacheRequestHeaders['authorization']);
+                }
             }
         }
 

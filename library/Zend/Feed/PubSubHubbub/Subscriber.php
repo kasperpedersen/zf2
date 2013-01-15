@@ -3,7 +3,7 @@
  * Zend Framework (http://framework.zend.com/)
  *
  * @link      http://github.com/zendframework/zf2 for the canonical source repository
- * @copyright Copyright (c) 2005-2012 Zend Technologies USA Inc. (http://www.zend.com)
+ * @copyright Copyright (c) 2005-2013 Zend Technologies USA Inc. (http://www.zend.com)
  * @license   http://framework.zend.com/license/new-bsd New BSD License
  * @package   Zend_Feed
  */
@@ -625,7 +625,7 @@ class Subscriber
             }
             $client->setUri($url);
             $client->setRawBody($this->_getRequestParameters($url, $mode));
-            $response = $client->getResponse();
+            $response = $client->send();
             if ($response->getStatusCode() !== 204
                 && $response->getStatusCode() !== 202
             ) {
@@ -744,7 +744,7 @@ class Subscriber
             'verify_token'       => hash('sha256', $params['hub.verify_token']),
             'secret'             => null,
             'expiration_time'    => $expires,
-            'subscription_state' => PubSubHubbub::SUBSCRIPTION_NOTVERIFIED,
+            'subscription_state' => ($mode == 'unsubscribe')? PubSubHubbub::SUBSCRIPTION_TODELETE : PubSubHubbub::SUBSCRIPTION_NOTVERIFIED,
         );
         $this->getStorage()->setSubscription($data);
 

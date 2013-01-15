@@ -8,7 +8,7 @@ read/subscribe to the following resources:
  -  Coding Standards:
     http://framework.zend.com/wiki/display/ZFDEV2/Coding+Standards
  -  ZF Git Guide:
-    [README-GIT.md](README-GIT.md)
+    README-GIT.md
  -  Contributor's Guide:
     http://framework.zend.com/participate/contributor-guide
  -  ZF Contributor's mailing list:
@@ -25,7 +25,7 @@ page, http://framework.zend.com/wiki/display/ZFDEV2/RFC%27s.
 
 To run tests:
 
-- Make sure you have a recent version of PHPUnit installed; 3.6.0
+- Make sure you have a recent version of PHPUnit installed; 3.7.0
   minimally.
 - Enter the `tests/` subdirectory.
 - Execute PHPUnit, providing a path to a component directory for which

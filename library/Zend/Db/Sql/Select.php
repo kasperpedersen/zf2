@@ -261,7 +261,7 @@ class Select extends AbstractSql implements SqlInterface, PreparableSqlInterface
                     } elseif (is_string($pkey)) {
                         // Otherwise, if still a string, do something intelligent with the PHP type provided
 
-                        if (is_null($pvalue)) {
+                        if ($pvalue === null) {
                             // map PHP null to SQL IS NULL expression
                             $predicate = new Predicate\IsNull($pkey, $pvalue);
                         } elseif (is_array($pvalue)) {
@@ -627,7 +627,7 @@ class Select extends AbstractSql implements SqlInterface, PreparableSqlInterface
             // note: for Expression objects, pass them to processExpression with a prefix specific to each join (used for named parameters)
             $joinSpecArgArray[$j][] = ($join['on'] instanceof ExpressionInterface)
                 ? $this->processExpression($join['on'], $platform, $adapter, $this->processInfo['paramPrefix'] . 'join' . ($j+1) . 'part')
-                : $platform->quoteIdentifierInFragment($join['on'], array('=', 'AND', 'OR', '(', ')', 'BETWEEN')); // on
+                : $platform->quoteIdentifierInFragment($join['on'], array('=', 'AND', 'OR', '(', ')', 'BETWEEN', '<', '>')); // on
             if ($joinSpecArgArray[$j][2] instanceof StatementContainerInterface) {
                 if ($parameterContainer) {
                     $parameterContainer->merge($joinSpecArgArray[$j][2]->getParameterContainer());

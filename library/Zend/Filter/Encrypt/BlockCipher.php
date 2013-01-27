@@ -34,15 +34,13 @@ class BlockCipher implements EncryptionAlgorithmInterface
      *     'key_iteration' => the number of iterations for the PBKDF2 key generation
      *     'algorithm      => cipher algorithm to use
      *     'hash'          => algorithm to use for the authentication
-     *     'iv'            => initialization vector
+     *     'vector'        => initialization vector
      * )
      */
     protected $encryption = array(
-        'key'                 => 'ZendFramework',
         'key_iteration'       => 5000,
         'algorithm'           => 'aes',
         'hash'                => 'sha256',
-        'vector'              => null,
     );
 
     /**
@@ -183,6 +181,34 @@ class BlockCipher implements EncryptionAlgorithmInterface
     }
 
     /**
+     * Set the encryption key
+     *
+     * @param  string $key
+     * @return BlockCipher
+     * @throws Exception\InvalidArgumentException
+     */
+    public function setKey($key)
+    {
+        try {
+            $this->blockCipher->setKey($key);
+        } catch (CryptException\InvalidArgumentException $e) {
+            throw new Exception\InvalidArgumentException($e->getMessage());
+        }
+        $this->encryption['key'] = $key;
+        return $this;
+    }
+
+    /**
+     * Get the encryption key
+     *
+     * @return string
+     */
+    public function getKey()
+    {
+        return $this->encryption['key'];
+    }
+
+    /**
      * Returns the compression
      *
      * @return array
@@ -265,5 +291,4 @@ class BlockCipher implements EncryptionAlgorithmInterface
     {
         return 'BlockCipher';
     }
-
 }

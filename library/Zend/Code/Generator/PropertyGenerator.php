@@ -48,7 +48,7 @@ class PropertyGenerator extends AbstractMemberGenerator
         $property->setDefaultValue($allDefaultProperties[$reflectionProperty->getName()]);
 
         if ($reflectionProperty->getDocComment() != '') {
-            $property->setDocBlock(DocBlockGenerator::fromReflection($reflectionProperty->getDocComment()));
+            $property->setDocBlock(DocBlockGenerator::fromReflection($reflectionProperty->getDocBlock()));
         }
 
         if ($reflectionProperty->isStatic()) {
@@ -177,5 +177,4 @@ class PropertyGenerator extends AbstractMemberGenerator
 
         return $output;
     }
-
 }

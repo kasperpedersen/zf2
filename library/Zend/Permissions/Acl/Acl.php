@@ -572,7 +572,11 @@ class Acl
         $resources = array();
         foreach ($resourcesTemp as $resource) {
             if (null !== $resource) {
-                $resources[] = $this->getResource($resource);
+                $resourceObj = $this->getResource($resource);
+                $resourceId = $resourceObj->getResourceId();
+                $children = $this->getChildResources($resourceObj);
+                $resources = array_merge($resources, $children);
+                $resources[$resourceId] = $resourceObj;
             } else {
                 $resources[] = null;
             }
@@ -657,6 +661,28 @@ class Acl
         }
 
         return $this;
+    }
+
+    /**
+     * Returns all child resources from the given resource.
+     *
+     * @param  Resource\ResourceInterface|string    $resource
+     * @return Resource\ResourceInterface[]
+     */
+    protected function getChildResources(Resource\ResourceInterface $resource)
+    {
+        $return = array();
+        $id = $resource->getResourceId();
+
+        $children = $this->resources[$id]['children'];
+        foreach($children as $child) {
+            $child_return = $this->getChildResources($child);
+            $child_return[$child->getResourceId()] = $child;
+
+            $return = array_merge($return, $child_return);
+        }
+
+        return $return;
     }
 
     /**
@@ -747,7 +773,10 @@ class Acl
                 if (null !== ($ruleType = $this->getRuleType($resource, null, $privilege))) {
                     return self::TYPE_ALLOW === $ruleType;
                 } elseif (null !== ($ruleTypeAllPrivileges = $this->getRuleType($resource, null, null))) {
-                    return self::TYPE_ALLOW === $ruleTypeAllPrivileges;
+                    $result = self::TYPE_ALLOW === $ruleTypeAllPrivileges;
+                    if ($result || null === $resource) {
+                        return $result;
+                    }
                 }
 
                 // try next Resource

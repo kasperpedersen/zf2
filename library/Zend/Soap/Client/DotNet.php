@@ -18,10 +18,6 @@ use Zend\Soap\Exception;
  *
  * Class is intended to be used with .Net Web Services.
  *
- * Important! Class is at experimental stage now.
- * Please leave your notes, compatibility issues reports or
- * suggestions in fw-webservices@lists.zend.com or fw-general@lists.com
- *
  * @category   Zend
  * @package    Zend_Soap
  * @subpackage Client
@@ -78,5 +74,4 @@ class DotNet extends SOAPClient
 
         return $result->$resultProperty;
     }
-
 }

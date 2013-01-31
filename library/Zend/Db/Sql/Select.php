@@ -245,7 +245,8 @@ class Select extends AbstractSql implements SqlInterface, PreparableSqlInterface
         } else {
             if (is_string($predicate)) {
                 // String $predicate should be passed as an expression
-                $predicate = new Predicate\Expression($predicate);
+                $predicate = (strpos($predicate, Expression::PLACEHOLDER) !== false)
+                    ? new Predicate\Expression($predicate) : new Predicate\Literal($predicate);
                 $this->where->addPredicate($predicate, $combination);
             } elseif (is_array($predicate)) {
 
@@ -275,7 +276,8 @@ class Select extends AbstractSql implements SqlInterface, PreparableSqlInterface
                         $predicate = $pvalue;
                     } else {
                         // must be an array of expressions (with int-indexed array)
-                        $predicate = new Predicate\Expression($pvalue);
+                        $predicate = (strpos($pvalue, Expression::PLACEHOLDER) !== false)
+                            ? new Predicate\Expression($pvalue) : new Predicate\Literal($pvalue);
                     }
                     $this->where->addPredicate($predicate, $combination);
                 }
@@ -629,12 +631,29 @@ class Select extends AbstractSql implements SqlInterface, PreparableSqlInterface
         $joinSpecArgArray = array();
         foreach ($this->joins as $j => $join) {
             $joinSpecArgArray[$j] = array();
+
             // type
             $joinSpecArgArray[$j][] = strtoupper($join['type']);
+
             // table name
-            $joinSpecArgArray[$j][] = (is_array($join['name']))
-                ? $platform->quoteIdentifier(current($join['name'])) . ' AS ' . $platform->quoteIdentifier(key($join['name']))
-                : $platform->quoteIdentifier($join['name']);
+            if (is_array($join['name'])) {
+                $joinName = current($join['name']);
+                $joinAs = $platform->quoteIdentifier(key($join['name']));
+            } else {
+                $joinName = $join['name'];
+            }
+            if ($joinName instanceof TableIdentifier) {
+                $joinName = $joinName->getTableAndSchema();
+                $joinName = $platform->quoteIdentifier($joinName[1]) . $platform->getIdentifierSeparator() . $platform->quoteIdentifier($joinName[0]);
+            } else {
+                if ($joinName instanceof Select) {
+                    $joinName = '(' . $joinName->processSubSelect($joinName, $platform, $driver, $parameterContainer) . ')';
+                } else {
+                    $joinName = $platform->quoteIdentifier($joinName);
+                }
+            }
+            $joinSpecArgArray[$j][] = (isset($joinAs)) ? $joinName . ' AS ' . $joinAs : $joinName;
+
             // on expression
             // note: for Expression objects, pass them to processExpression with a prefix specific to each join (used for named parameters)
             $joinSpecArgArray[$j][] = ($join['on'] instanceof ExpressionInterface)

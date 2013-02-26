@@ -222,7 +222,7 @@ class ServiceManager implements ServiceLocatorInterface
     {
         $cName = $this->canonicalizeName($name);
 
-        if ($this->has(array($cName, $name), false, false)) {
+        if ($this->has(array($cName, $name), false)) {
             if ($this->allowOverride === false) {
                 throw new Exception\InvalidServiceNameException(sprintf(
                     'A service by the name or alias "%s" already exists and cannot be overridden; please use an alternate name',
@@ -262,7 +262,7 @@ class ServiceManager implements ServiceLocatorInterface
             );
         }
 
-        if ($this->has(array($cName, $name), false, false)) {
+        if ($this->has(array($cName, $name), false)) {
             if ($this->allowOverride === false) {
                 throw new Exception\InvalidServiceNameException(sprintf(
                     'A service by the name or alias "%s" already exists and cannot be overridden, please use an alternate name',
@@ -351,15 +351,14 @@ class ServiceManager implements ServiceLocatorInterface
      *
      * @param  string  $name
      * @param  mixed   $service
-     * @param  bool    $shared
      * @return ServiceManager
      * @throws Exception\InvalidServiceNameException
      */
-    public function setService($name, $service, $shared = null)
+    public function setService($name, $service)
     {
         $cName = $this->canonicalizeName($name);
 
-        if ($this->has($cName, false, false)) {
+        if ($this->has($cName, false)) {
             if ($this->allowOverride === false) {
                 throw new Exception\InvalidServiceNameException(sprintf(
                     '%s: A service by the name "%s" or alias already exists and cannot be overridden, please use an alternate name.',
@@ -370,12 +369,8 @@ class ServiceManager implements ServiceLocatorInterface
             $this->unregisterService($cName);
         }
 
-        if ($shared === null) {
-            $shared = $this->shareByDefault();
-        }
-
         $this->instances[$cName] = $service;
-        $this->shared[$cName]    = (bool) $shared;
+
         return $this;
     }
 
@@ -450,7 +445,7 @@ class ServiceManager implements ServiceLocatorInterface
         }
 
         // Still no instance? raise an exception
-        if (!$instance && !is_array($instance)) {
+        if ($instance === null && !is_array($instance)) {
             if ($isAlias) {
                 throw new Exception\ServiceNotFoundException(sprintf(
                     'An alias "%s" was requested but no service could be found.',
@@ -499,11 +494,11 @@ class ServiceManager implements ServiceLocatorInterface
             $instance = $this->createFromFactory($cName, $rName);
         }
 
-        if (!$instance && isset($this->invokableClasses[$cName])) {
+        if ($instance === false && isset($this->invokableClasses[$cName])) {
             $instance = $this->createFromInvokable($cName, $rName);
         }
 
-        if (!$instance && $this->canCreateFromAbstractFactory($cName, $rName)) {
+        if ($instance === false && $this->canCreateFromAbstractFactory($cName, $rName)) {
             $instance = $this->createFromAbstractFactory($cName, $rName);
         }
 
@@ -640,7 +635,7 @@ class ServiceManager implements ServiceLocatorInterface
             throw new Exception\InvalidServiceNameException('Invalid service name alias');
         }
 
-        if ($this->allowOverride === false && $this->has(array($cAlias, $alias), false, false)) {
+        if ($this->allowOverride === false && $this->has(array($cAlias, $alias), false)) {
             throw new Exception\InvalidServiceNameException(sprintf(
                 'An alias by the name "%s" or "%s" already exists',
                 $cAlias,

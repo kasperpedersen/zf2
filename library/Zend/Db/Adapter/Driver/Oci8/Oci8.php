@@ -11,8 +11,9 @@ namespace Zend\Db\Adapter\Driver\Oci8;
 
 use Zend\Db\Adapter\Driver\DriverInterface;
 use Zend\Db\Adapter\Exception;
+use Zend\Db\Adapter\Profiler;
 
-class Oci8 implements DriverInterface
+class Oci8 implements DriverInterface, Profiler\ProfilerAwareInterface
 {
 
     /**
@@ -29,6 +30,11 @@ class Oci8 implements DriverInterface
      * @var Result
      */
     protected $resultPrototype = null;
+
+    /**
+     * @var Profiler\ProfilerInterface
+     */
+    protected $profiler = null;
 
     /**
      * @var array
@@ -57,6 +63,30 @@ class Oci8 implements DriverInterface
     }
 
     /**
+     * @param Profiler\ProfilerInterface $profiler
+     * @return Oci8
+     */
+    public function setProfiler(Profiler\ProfilerInterface $profiler)
+    {
+        $this->profiler = $profiler;
+        if ($this->connection instanceof Profiler\ProfilerAwareInterface) {
+            $this->connection->setProfiler($profiler);
+        }
+        if ($this->statementPrototype instanceof Profiler\ProfilerAwareInterface) {
+            $this->statementPrototype->setProfiler($profiler);
+        }
+        return $this;
+    }
+
+    /**
+     * @return null|Profiler\ProfilerInterface
+     */
+    public function getProfiler()
+    {
+        return $this->profiler;
+    }
+
+    /**
      * Register connection
      *
      * @param  Connection $connection
@@ -73,6 +103,7 @@ class Oci8 implements DriverInterface
      * Register statement prototype
      *
      * @param Statement $statementPrototype
+     * @return Oci8
      */
     public function registerStatementPrototype(Statement $statementPrototype)
     {
@@ -93,6 +124,7 @@ class Oci8 implements DriverInterface
      * Register result prototype
      *
      * @param Result $resultPrototype
+     * @return Oci8
      */
     public function registerResultPrototype(Result $resultPrototype)
     {

@@ -420,7 +420,7 @@ class BaseInputFilterTest extends TestCase
         $filter = new InputFilter();
 
         $foo   = new FileInput();
-        $foo->getValidatorChain()->attach(new Validator\File\Upload());
+        $foo->getValidatorChain()->attach(new Validator\File\UploadFile());
         $foo->setRequired(false);
 
         $filter->add($foo, 'foo');
@@ -609,5 +609,37 @@ class BaseInputFilterTest extends TestCase
         $filter->setData($validData);
         $unknown = $filter->getUnknown();
         $this->assertEquals(0, count($unknown));
+    }
+
+    public function testValidateUseExplodeAndInstanceOf()
+    {
+        $filter = new InputFilter();
+
+        $input = new Input();
+        $input->setRequired(true);
+
+        $input->getValidatorChain()->attach(
+            new \Zend\Validator\Explode(
+                array(
+                    'validator' => new \Zend\Validator\IsInstanceOf(
+                        array(
+                            'className' => 'Zend\InputFilter\Input'
+                        )
+                    )
+                )
+            )
+        );
+
+        $filter->add($input, 'example');
+
+        $data = array(
+            'example' => array(
+                $input
+            )
+        );
+
+        $filter->setData($data);
+        $this->assertTrue($filter->isValid());
+
     }
 }

@@ -26,7 +26,11 @@
         "psr-0": {
             "Zend\\": "library/",
             "ZendTest\\": "tests/"
-        }
+        },
+        "files": [
+            "library/Zend/Stdlib/compatibility/autoload.php",
+            "library/Zend/Session/compatibility/autoload.php"
+        ]
     },
     "bin": [
         "bin/classmap_generator.php"
@@ -85,8 +89,8 @@
     },
     "extra": {
         "branch-alias": {
-            "dev-master": "2.0-dev",
-            "dev-develop": "2.1-dev"
+            "dev-master": "2.1-dev",
+            "dev-develop": "2.2-dev"
         }
     }
 }

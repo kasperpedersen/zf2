@@ -12,8 +12,9 @@ namespace Zend\Db\Adapter\Driver\Oci8;
 use Zend\Db\Adapter\Driver\StatementInterface;
 use Zend\Db\Adapter\Exception;
 use Zend\Db\Adapter\ParameterContainer;
+use Zend\Db\Adapter\Profiler;
 
-class Statement implements StatementInterface
+class Statement implements StatementInterface, Profiler\ProfilerAwareInterface
 {
 
     /**
@@ -25,6 +26,11 @@ class Statement implements StatementInterface
      * @var Oci8
      */
     protected $driver = null;
+
+    /**
+     * @var Profiler\ProfilerInterface
+     */
+    protected $profiler = null;
 
     /**
      * @var string
@@ -68,6 +74,24 @@ class Statement implements StatementInterface
     }
 
     /**
+     * @param Profiler\ProfilerInterface $profiler
+     * @return Statement
+     */
+    public function setProfiler(Profiler\ProfilerInterface $profiler)
+    {
+        $this->profiler = $profiler;
+        return $this;
+    }
+
+    /**
+     * @return null|Profiler\ProfilerInterface
+     */
+    public function getProfiler()
+    {
+        return $this->profiler;
+    }
+
+    /**
      * Initialize
      *
      * @param  resource $oci8
@@ -95,6 +119,7 @@ class Statement implements StatementInterface
      * Set Parameter container
      *
      * @param ParameterContainer $parameterContainer
+     * @return Statement
      */
     public function setParameterContainer(ParameterContainer $parameterContainer)
     {
@@ -160,6 +185,7 @@ class Statement implements StatementInterface
 
     /**
      * @param string $sql
+     * @return Statement
      */
     public function prepare($sql = null)
     {
@@ -216,7 +242,20 @@ class Statement implements StatementInterface
         }
         /** END Standard ParameterContainer Merging Block */
 
-        $ret = @oci_execute($this->resource);
+        if ($this->profiler) {
+            $this->profiler->profilerStart($this);
+        }
+
+        if ($this->driver->getConnection()->inTransaction()) {
+            $ret = @oci_execute($this->resource, OCI_NO_AUTO_COMMIT);
+        } else {
+            $ret = @oci_execute($this->resource, OCI_COMMIT_ON_SUCCESS);
+        }
+
+        if ($this->profiler) {
+            $this->profiler->profilerFinish();
+        }
+
         if ($ret === false) {
             $e = oci_error($this->resource);
             throw new Exception\RuntimeException($e['message'], $e['code']);
@@ -238,14 +277,19 @@ class Statement implements StatementInterface
         foreach ($parameters as $name => &$value) {
             if ($this->parameterContainer->offsetHasErrata($name)) {
                 switch ($this->parameterContainer->offsetGetErrata($name)) {
-                    case ParameterContainer::TYPE_DOUBLE:
-                        $type = SQLT_LNG;
-                        break;
                     case ParameterContainer::TYPE_NULL:
+                        $type = null;
                         $value = null;
                         break;
+                    case ParameterContainer::TYPE_DOUBLE:
                     case ParameterContainer::TYPE_INTEGER:
                         $type = SQLT_INT;
+                        if (is_string($value)) {
+                            $value = (int) $value;
+                        }
+                        break;
+                    case ParameterContainer::TYPE_BINARY:
+                        $type = SQLT_BIN;
                         break;
                     case ParameterContainer::TYPE_STRING:
                     default:
@@ -255,7 +299,8 @@ class Statement implements StatementInterface
             } else {
                 $type = SQLT_CHR;
             }
-            oci_bind_by_name($this->resource, ':' . $name, $value, -1, $type);
+
+            oci_bind_by_name($this->resource, $name, $value, -1, $type);
         }
     }
 

@@ -3,7 +3,7 @@
  * Zend Framework (http://framework.zend.com/)
  *
  * @link      http://github.com/zendframework/zf2 for the canonical source repository
- * @copyright Copyright (c) 2005-2012 Zend Technologies USA Inc. (http://www.zend.com)
+ * @copyright Copyright (c) 2005-2013 Zend Technologies USA Inc. (http://www.zend.com)
  * @license   http://framework.zend.com/license/new-bsd New BSD License
  */
 namespace Zend\Test\PHPUnit\Controller;
@@ -105,6 +105,7 @@ abstract class AbstractControllerTestCase extends PHPUnit_Framework_TestCase
     /**
      * Set the application config
      * @param  array $applicationConfig
+     * @return AbstractControllerTestCase
      * @throws LogicException
      */
     public function setApplicationConfig($applicationConfig)
@@ -146,7 +147,7 @@ abstract class AbstractControllerTestCase extends PHPUnit_Framework_TestCase
         $this->application = Application::init($appConfig);
 
         $events = $this->application->getEventManager();
-        foreach($events->getListeners(MvcEvent::EVENT_FINISH) as $listener) {
+        foreach ($events->getListeners(MvcEvent::EVENT_FINISH) as $listener) {
             $callback = $listener->getCallback();
             if (is_array($callback) && $callback[0] instanceof SendResponseListener) {
                 $events->detach($listener);

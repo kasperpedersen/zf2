@@ -11,13 +11,19 @@ namespace Zend\Db\Adapter\Driver\Pdo;
 
 use Zend\Db\Adapter\Driver\ConnectionInterface;
 use Zend\Db\Adapter\Exception;
+use Zend\Db\Adapter\Profiler;
 
-class Connection implements ConnectionInterface
+class Connection implements ConnectionInterface, Profiler\ProfilerAwareInterface
 {
     /**
      * @var Pdo
      */
     protected $driver = null;
+
+    /**
+     * @var Profiler\ProfilerInterface
+     */
+    protected $profiler = null;
 
     /**
      * @var string
@@ -66,6 +72,24 @@ class Connection implements ConnectionInterface
     {
         $this->driver = $driver;
         return $this;
+    }
+
+    /**
+     * @param Profiler\ProfilerInterface $profiler
+     * @return Connection
+     */
+    public function setProfiler(Profiler\ProfilerInterface $profiler)
+    {
+        $this->profiler = $profiler;
+        return $this;
+    }
+
+    /**
+     * @return null|Profiler\ProfilerInterface
+     */
+    public function getProfiler()
+    {
+        return $this->profiler;
     }
 
     /**
@@ -255,7 +279,11 @@ class Connection implements ConnectionInterface
             $this->resource->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
             $this->driverName = strtolower($this->resource->getAttribute(\PDO::ATTR_DRIVER_NAME));
         } catch (\PDOException $e) {
-            throw new Exception\RuntimeException('Connect Error: ' . $e->getMessage(), $e->getCode(), $e);
+            $code = $e->getCode();
+            if (!is_long($code)) {
+                $code = null;
+            }
+            throw new Exception\RuntimeException('Connect Error: ' . $e->getMessage(), $code, $e);
         }
 
         return $this;
@@ -348,7 +376,15 @@ class Connection implements ConnectionInterface
             $this->connect();
         }
 
+        if ($this->profiler) {
+            $this->profiler->profilerStart($sql);
+        }
+
         $resultResource = $this->resource->query($sql);
+
+        if ($this->profiler) {
+            $this->profiler->profilerFinish($sql);
+        }
 
         if ($resultResource === false) {
             $errorInfo = $this->resource->errorInfo();

@@ -11,6 +11,7 @@
 namespace ZendTest\Db\Adapter;
 
 use Zend\Db\Adapter\Adapter;
+use Zend\Db\Adapter\Profiler;
 
 class AdapterTest extends \PHPUnit_Framework_TestCase
 {
@@ -50,6 +51,29 @@ class AdapterTest extends \PHPUnit_Framework_TestCase
         $this->mockDriver->expects($this->any())->method('createStatement')->will($this->returnValue($this->mockStatement));
 
         $this->adapter = new Adapter($this->mockDriver, $this->mockPlatform);
+    }
+
+    /**
+     * @testdox unit test: Test setProfiler() will store profiler
+     * @covers Zend\Db\Adapter\Adapter::setProfiler
+     */
+    public function testSetProfiler()
+    {
+        $ret = $this->adapter->setProfiler(new Profiler\Profiler());
+        $this->assertSame($this->adapter, $ret);
+    }
+
+    /**
+     * @testdox unit test: Test getProfiler() will store profiler
+     * @covers Zend\Db\Adapter\Adapter::getProfiler
+     */
+    public function testGetProfiler()
+    {
+        $this->adapter->setProfiler($profiler = new Profiler\Profiler());
+        $this->assertSame($profiler, $this->adapter->getProfiler());
+
+        $adapter = new Adapter(array('driver' => $this->mockDriver, 'profiler' => true), $this->mockPlatform);
+        $this->assertInstanceOf('Zend\Db\Adapter\Profiler\Profiler', $adapter->getProfiler());
     }
 
     /**
@@ -185,6 +209,40 @@ class AdapterTest extends \PHPUnit_Framework_TestCase
     {
         $s = $this->adapter->query('SELECT foo');
         $this->assertSame($this->mockStatement, $s);
+    }
+
+    /**
+     * @testdox unit test: Test query() in prepare mode, with array of parameters, produces a result object
+     * @covers Zend\Db\Adapter\Adapter::query
+     */
+    public function testQueryWhenPreparedWithParameterArrayProducesResult()
+    {
+        $parray = array('bar'=>'foo');
+        $sql = 'SELECT foo, :bar';
+        $statement = $this->getMock('\Zend\Db\Adapter\Driver\StatementInterface');
+        $result = $this->getMock('Zend\Db\Adapter\Driver\ResultInterface');
+        $this->mockDriver->expects($this->any())->method('createStatement')->with($sql)->will($this->returnValue($statement));
+        $this->mockStatement->expects($this->any())->method('execute')->will($this->returnValue($result));
+
+        $r = $this->adapter->query($sql, $parray);
+        $this->assertSame($result, $r);
+    }
+
+    /**
+     * @testdox unit test: Test query() in prepare mode, with ParameterContainer, produces a result object
+     * @covers Zend\Db\Adapter\Adapter::query
+     */
+    public function testQueryWhenPreparedWithParameterContainerProducesResult()
+    {
+        $sql = 'SELECT foo';
+        $parameterContainer = $this->getMock('Zend\Db\Adapter\ParameterContainer');
+        $result = $this->getMock('Zend\Db\Adapter\Driver\ResultInterface');
+        $this->mockDriver->expects($this->any())->method('createStatement')->with($sql)->will($this->returnValue($this->mockStatement));
+        $this->mockStatement->expects($this->any())->method('execute')->will($this->returnValue($result));
+        $result->expects($this->any())->method('isQueryResult')->will($this->returnValue(true));
+
+        $r = $this->adapter->query($sql, $parameterContainer);
+        $this->assertInstanceOf('Zend\Db\ResultSet\ResultSet', $r);
     }
 
     /**

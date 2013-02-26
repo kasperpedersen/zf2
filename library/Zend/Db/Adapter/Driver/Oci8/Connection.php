@@ -11,13 +11,19 @@ namespace Zend\Db\Adapter\Driver\Oci8;
 
 use Zend\Db\Adapter\Driver\ConnectionInterface;
 use Zend\Db\Adapter\Exception;
+use Zend\Db\Adapter\Profiler;
 
-class Connection implements ConnectionInterface
+class Connection implements ConnectionInterface, Profiler\ProfilerAwareInterface
 {
     /**
      * @var Oci8
      */
     protected $driver = null;
+
+    /**
+     * @var Profiler\ProfilerInterface
+     */
+    protected $profiler = null;
 
     /**
      * Connection parameters
@@ -66,6 +72,24 @@ class Connection implements ConnectionInterface
     }
 
     /**
+     * @param Profiler\ProfilerInterface $profiler
+     * @return Connection
+     */
+    public function setProfiler(Profiler\ProfilerInterface $profiler)
+    {
+        $this->profiler = $profiler;
+        return $this;
+    }
+
+    /**
+     * @return null|Profiler\ProfilerInterface
+     */
+    public function getProfiler()
+    {
+        return $this->profiler;
+    }
+
+    /**
      * Set connection parameters
      *
      * @param  array $connectionParameters
@@ -98,11 +122,11 @@ class Connection implements ConnectionInterface
             $this->connect();
         }
 
-        $query = "SELECT sys_context('USERENV', 'DB_NAME') as \"database_name\" FROM DUAL";
+        $query = "SELECT sys_context('USERENV', 'CURRENT_SCHEMA') as \"current_schema\" FROM DUAL";
         $stmt = oci_parse($this->resource, $query);
         oci_execute($stmt);
         $dbNameArray = oci_fetch_array($stmt, OCI_ASSOC);
-        return $dbNameArray['database_name'];
+        return $dbNameArray['current_schema'];
     }
 
     /**
@@ -134,15 +158,12 @@ class Connection implements ConnectionInterface
     /**
      * Connect
      *
-     * @return null
+     * @return Connection
      */
     public function connect()
     {
-        // @todo
-
-
         if (is_resource($this->resource)) {
-            return;
+            return $this;
         }
 
         // localize
@@ -158,15 +179,24 @@ class Connection implements ConnectionInterface
             return null;
         };
 
-        // $hostname = $findParameterValue(array('hostname', 'host_name', ';host'));
-        $username = $findParameterValue(array('username', 'user'));
+        // http://www.php.net/manual/en/function.oci-connect.php
+        $username = $findParameterValue(array('username'));
         $password = $findParameterValue(array('password'));
-        $connectString = $findParameterValue(array('connection_string', 'connectionstring', 'connection', 'instance'));
-        //$service = $findParameterValue(array('service_name', 'service', 'db', 'schema'));
-        //$port     = (isset($p['port'])) ? (int) $p['port'] : null;
-        //$socket   = (isset($p['socket'])) ? $p['socket'] : null;
+        $connectionString = $findParameterValue(array('connection_string', 'connectionstring', 'connection', 'hostname', 'instance'));
+        $characterSet = $findParameterValue(array('character_set', 'charset', 'encoding'));
 
-        $this->resource = oci_connect($username, $password, $connectString);
+        // connection modifiers
+        $isUnique = $findParameterValue(array('unique'));
+        $isPersistent = $findParameterValue(array('persistent'));
+
+        if ($isUnique == true) {
+            $this->resource = oci_new_connect($username, $password, $connectionString, $characterSet);
+        } elseif ($isPersistent == true) {
+            $this->resource = oci_pconnect($username, $password, $connectionString, $characterSet);
+        } else {
+            $this->resource = oci_connect($username, $password, $connectionString, $characterSet);
+        }
+
         if (!$this->resource) {
             $e = oci_error();
             throw new Exception\RuntimeException(
@@ -175,6 +205,7 @@ class Connection implements ConnectionInterface
                 new Exception\ErrorException($e['message'], $e['code'])
             );
         }
+
         return $this;
     }
 
@@ -206,7 +237,19 @@ class Connection implements ConnectionInterface
         if (!$this->isConnected()) {
             $this->connect();
         }
-        // @todo
+
+        // A transaction begins when the first SQL statement that changes data is executed with oci_execute() using the OCI_NO_AUTO_COMMIT flag.
+        $this->inTransaction = true;
+    }
+
+    /**
+     * In transaction
+     *
+     * @return boolean
+     */
+    public function inTransaction()
+    {
+        return $this->inTransaction;
     }
 
     /**
@@ -218,7 +261,13 @@ class Connection implements ConnectionInterface
             $this->connect();
         }
 
-        // @todo
+        if ($this->inTransaction) {
+            $valid = oci_commit($this->resource);
+            if ($valid === false) {
+                $e = oci_error($this->resource);
+                throw new Exception\InvalidQueryException($e['message'], $e['code']);
+            }
+        }
     }
 
     /**
@@ -236,7 +285,12 @@ class Connection implements ConnectionInterface
             throw new Exception\RuntimeException('Must call commit() before you can rollback.');
         }
 
-        // @todo
+        $valid = oci_rollback($this->resource);
+        if ($valid === false) {
+            $e = oci_error($this->resource);
+            throw new Exception\InvalidQueryException($e['message'], $e['code']);
+        }
+
         return $this;
     }
 
@@ -252,9 +306,21 @@ class Connection implements ConnectionInterface
             $this->connect();
         }
 
+        if ($this->profiler) {
+            $this->profiler->profilerStart($sql);
+        }
+
         $ociStmt = oci_parse($this->resource, $sql);
 
-        $valid = @oci_execute($ociStmt);
+        if ($this->inTransaction) {
+            $valid = @oci_execute($ociStmt, OCI_NO_AUTO_COMMIT);
+        } else {
+            $valid = @oci_execute($ociStmt, OCI_COMMIT_ON_SUCCESS);
+        }
+
+        if ($this->profiler) {
+            $this->profiler->profilerFinish($sql);
+        }
 
         if ($valid === false) {
             $e = oci_error($ociStmt);

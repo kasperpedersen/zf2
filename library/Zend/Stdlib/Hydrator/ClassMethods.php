@@ -136,7 +136,9 @@ class ClassMethods extends AbstractHydrator implements HydratorOptionsInterface
             $attribute = $method;
             if (preg_match('/^get/', $method)) {
                 $attribute = substr($method, 3);
-                $attribute = lcfirst($attribute);
+                if(!property_exists($object, $attribute)) {
+                    $attribute = lcfirst($attribute);
+                }
             }
 
             if ($this->underscoreSeparatedKeys) {
@@ -177,14 +179,12 @@ class ClassMethods extends AbstractHydrator implements HydratorOptionsInterface
             if ($this->underscoreSeparatedKeys) {
                 $method = preg_replace_callback('/(_[a-z])/', $transform, $method);
             }
-            if (method_exists($object, $method)) {
+            if (is_callable(array($object, $method))) {
                 $value = $this->hydrateValue($property, $value, $data);
-
                 $object->$method($value);
             }
         }
 
         return $object;
     }
-
 }

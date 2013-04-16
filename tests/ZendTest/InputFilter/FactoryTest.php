@@ -240,6 +240,17 @@ class FactoryTest extends TestCase
         $this->assertEquals('foo', $input->getName());
     }
 
+    public function testFactoryWillCreateInputWithContinueIfEmptyFlag()
+    {
+        $factory = new Factory();
+        $input = $factory->createInput(array(
+            'name'              => 'foo',
+            'continue_if_empty' => true,
+        ));
+        $this->assertInstanceOf('Zend\InputFilter\InputInterface', $input);
+        $this->assertTrue($input->continueIfEmpty());
+    }
+
     public function testFactoryAcceptsInputInterface()
     {
         $factory = new Factory();
@@ -339,11 +350,15 @@ class FactoryTest extends TestCase
                 'type' => 'ZendTest\InputFilter\TestAsset\CustomInput',
                 'name' => 'bat',
             ),
+            'zomg' => array(
+                'name' => 'zomg',
+                'continue_if_empty' => true,
+            ),
         ));
         $this->assertInstanceOf('Zend\InputFilter\InputFilter', $inputFilter);
-        $this->assertEquals(4, count($inputFilter));
+        $this->assertEquals(5, count($inputFilter));
 
-        foreach (array('foo', 'bar', 'baz', 'bat') as $name) {
+        foreach (array('foo', 'bar', 'baz', 'bat', 'zomg') as $name) {
             $input = $inputFilter->get($name);
 
             switch ($name) {
@@ -373,6 +388,9 @@ class FactoryTest extends TestCase
                     $this->assertInstanceOf('ZendTest\InputFilter\TestAsset\CustomInput', $input);
                     $this->assertEquals('bat', $input->getName());
                     break;
+                case 'zomg':
+                    $this->assertInstanceOf('Zend\InputFilter\Input', $input);
+                    $this->assertTrue($input->continueIfEmpty());
             }
         }
     }
@@ -437,5 +455,48 @@ class FactoryTest extends TestCase
             'error_message' => 'My custom error message',
         ));
         $this->assertEquals('My custom error message', $input->getErrorMessage());
+    }
+
+    public function testFactoryWillNotGetPrioritySetting()
+    {
+        //Reminder: Priority at which to enqueue filter; defaults to 1000 (higher executes earlier)
+        $factory = new Factory();
+        $input   = $factory->createInput(array(
+            'name'    => 'foo',
+            'filters' => array(
+                array(
+                    'name'      => 'string_trim',
+                    'priority'  => \Zend\Filter\FilterChain::DEFAULT_PRIORITY - 1 // 999
+                ),
+                array(
+                    'name'      => 'string_to_upper',
+                    'priority'  => \Zend\Filter\FilterChain::DEFAULT_PRIORITY + 1 //1001
+                ),
+                array(
+                    'name'      => 'string_to_lower', // default priority 1000
+                )
+            )
+        ));
+
+        // We should have 3 filters
+        $this->assertEquals(3, $input->getFilterChain()->count());
+
+        // Filters should pop in the following order:
+        // string_to_upper (1001), string_to_lower (1000), string_trim (999)
+        $index = 0;
+        foreach($input->getFilterChain()->getFilters() as $filter) {
+            switch($index) {
+                case 0:
+                    $this->assertInstanceOf('Zend\Filter\StringToUpper', $filter);
+                    break;
+                case 1:
+                    $this->assertInstanceOf('Zend\Filter\StringToLower', $filter);
+                    break;
+                case 2:
+                    $this->assertInstanceOf('Zend\Filter\StringTrim', $filter);
+                    break;
+            }
+            $index++;
+        }
     }
 }
